@@ -1,13 +1,15 @@
 # מענים
 
-**Live site:** https://service-provider.2e28fox4gpdr.us-south.codeengine.appdomain.cloud
+**Live site:** https://maaneim.onrender.com
+
+**Short link:** https://ibm.biz/oservice
 
 Hebrew RTL portal for **addiction and mental-health services in Israel**, built for social workers. Search, filter, call, and keep a shared catalog of public services and supervised private / nonprofit frames.
 
 There is **no login**. Anyone with the URL can use it. Treat it as an internal professional tool: the data is a working catalog, not a clinical diagnosis, and a social worker should still confirm a phone number, license, and eligibility before referring someone.
 
 - **Source code:** [github.com/avivizel/oservice](https://github.com/avivizel/oservice)
-- **Host:** IBM Code Engine (Dallas / `us-south`), app name `service-provider`
+- **Host:** Render (Frankfurt), service `maaneim` — free instance, one replica
 - **Database of record:** IBM Cloud Object Storage (Frankfurt / `eu-de`), object `maaneim.db`
 
 Contact on the site footer: רונית גרינברג ויזל, רכזת התמכרויות, האגף לשירותים חברתיים, עיריית תל אביב-יפו — [grinberg_r@mail.tel-aviv.gov.il](mailto:grinberg_r@mail.tel-aviv.gov.il)
@@ -42,8 +44,8 @@ These are not optional implementation details. They are how the catalog is suppo
 | **Official sources win** | Ministry of Health, Ministry of Welfare, government, municipality, and Bituach Leumi beat NGO / HTML scrapes when the same service conflicts. |
 | **HTML and NGO need a human** | Scraped municipal pages and nonprofit sites land in **תור סוכן** until someone approves or rejects them. |
 | **Open catalog** | No user accounts. Ratings and edits are shared with everyone who uses the site. |
-| **The bucket is the database** | Code Engine (and any other host) must read and write **only** the SQLite file in COS. A new image push must not ship or overwrite that file. |
-| **One running replica** | SQLite + a single COS object cannot be safely written by two instances at once. Code Engine is set to **min scale 1 / max scale 1**. |
+| **The bucket is the database** | The live host must read and write **only** the SQLite file in COS. A new image push must not ship or overwrite that file. |
+| **One running replica** | SQLite + a single COS object cannot be safely written by two instances at once. Render is pinned to **one instance**. Do not also run Code Engine (or a second Render service) against the same object. |
 
 Footer disclaimer (also on every page): this is a local tool; information needs a social worker’s confirmation; if sources disagree, the official state source wins; check that a license is still valid before referring.
 
@@ -141,7 +143,7 @@ Safety in `app/cos.py`:
 - The app **will not** overwrite a populated bucket object with an empty or tiny file, or with a file that shrank by more than about 50% (guards against a bad boot wiping the catalog).
 - First-time `bootstrap_upload` only writes if the object is missing.
 
-**Never** point two production instances at this object. Keep Code Engine **max-scale = 1**.
+**Never** point two production instances at this object. Keep Render at **one instance**. Do not start Code Engine again while Render is live.
 
 Main tables:
 
@@ -200,37 +202,36 @@ Do not commit those values. If a key was ever pasted into chat or a ticket, rota
 | `COS_ENDPOINT` | Optional | Defaults to the `eu-de` public S3 endpoint |
 | `COS_INSTANCE_CRN` | Recommended | COS instance CRN |
 | `COS_OBJECT_KEY` | Optional | Defaults to `maaneim.db` |
-| `DATA_DIR` | Optional | Where SQLite lives on disk. On Code Engine: `/tmp/maaneim-data` |
-| `PORT` | On Code Engine | HTTP port (8080) |
+| `DATA_DIR` | Optional | Where SQLite lives on disk. On Render / Docker: `/tmp/maaneim-data` |
+| `PORT` | On Render | Set by the platform; the container listens on `$PORT` |
 
 COS is “on” only when **both** `COS_API_KEY` and `COS_BUCKET` are non-empty.
 
-On Code Engine these are injected from secret **`maaneim-cos`**, not from Git.
+On Render these are service environment variables (not committed to Git).
 
 ---
 
-## Production (IBM Code Engine)
+## Production (Render)
 
 | | |
 | --- | --- |
-| Project / app | `service-provider` |
-| Region | Dallas (`us-south`) |
-| URL | https://service-provider.2e28fox4gpdr.us-south.codeengine.appdomain.cloud |
+| Live site | https://maaneim.onrender.com |
+| Short link | https://ibm.biz/oservice |
+| Service | `maaneim` (`srv-da9a4m9f2nfc73ergf7g`) |
+| Dashboard | https://dashboard.render.com/web/srv-da9a4m9f2nfc73ergf7g |
+| Region | Frankfurt |
+| Plan | Free, **1 instance** |
 | Image | Built from this repo’s `Dockerfile` (`python:3.12-slim` + Uvicorn) |
 | Git source | https://github.com/avivizel/oservice (`main`) |
-| Secret | `maaneim-cos` (COS credentials) |
-| Scale | min 1, max 1, 0.5 CPU, 1 GB RAM, port 8080 |
+| Database | Same IBM COS object `maaneim.db` |
 
-Deploy from GitHub (does **not** upload the database):
+A push to `main` on GitHub auto-deploys on Render. The new container downloads `maaneim.db` from the bucket on boot. The Docker image does not contain `data/` or `*.db`.
 
-```text
-ibmcloud ce project select --name service-provider
-ibmcloud ce app update --name service-provider --build-source https://github.com/avivizel/oservice --build-commit main --min-scale 1 --max-scale 1 --wait
-```
+The free instance **sleeps after about 15 minutes** idle. The first visit after that is slower while the process starts and restores the database from COS.
 
-A new revision replaces the **container**. On boot the new process downloads `maaneim.db` from the bucket. The Docker image does not contain `data/` or `*.db` (see `.dockerignore` / `.ceignore`).
+### IBM Code Engine (not the live host)
 
-Pushing code to GitHub does **not** by itself redeploy. Someone still runs `ibmcloud ce app update` (or an equivalent CI step) against that commit.
+The previous URL https://service-provider.2e28fox4gpdr.us-south.codeengine.appdomain.cloud is **scaled to zero** and no longer has COS credentials, so it cannot write to the bucket. Do not scale it back up while Render is running.
 
 ---
 
