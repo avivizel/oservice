@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ service.name }}{% endblock %}
+{% block body %}
+<article class="dossier">
+  <header class="dossier-head">
+    <div>
+      <p class="eyebrow">{{ SERVICE_KINDS.get(service.kind, service.kind) }} · {{ ORG_TYPES.get(service.org_type, service.org_type) }}</p>
+      <h1>{{ service.name }}</h1>
+      <p class="meta">
+        {% if service.city %}{{ service.city }}{% endif %}
+        {% if service.district %} · {{ DISTRICTS.get(service.district, service.district) }}{% endif %}
+        {% if service.licensing %} · רישוי: {{ service.licensing }}{% endif %}
+      </p>
+      {% if service.supervision_text %}<p class="notes">{{ service.supervision_text }}</p>{% endif %}
+    </div>
+    <div class="head-actions">
+      {% if service.rating %}<span class="pill rating-{{ service.rating }}">{{ RATINGS.get(service.rating, service.rating) }}</span>{% endif %}
+      <form method="post" action="/services/{{ service.id }}/favorite">
+        <button type="submit">{{ 'הסרה ממועדפים' if is_fav else 'הוספה למועדפים' }}</button>
+      </form>
+      <a class="btn ghost" href="/services/{{ service.id }}/edit">עריכה</a>
+    </div>
+  </header>
+
+  <section class="grid-2">
+    <div class="panel">
+      <h2>פרטי קשר והפניה</h2>
+      <dl class="facts stacked">
+        <div><dt>כתובת</dt><dd>{{ service.address or '—' }}</dd></div>
+        <div><dt>טלפון</dt><dd>{% if service.phone %}<a class="btn call-btn" href="tel:{{ service.phone }}">חיוג {{ service.phone }}</a>{% else %}—{% endif %}{% if service.phone2 %}<br><a href="tel:{{ service.phone2 }}">{{ service.phone2 }}</a>{% endif %}</dd></div>
+        <div><dt>דוא״ל</dt><dd>{{ service.email or '—' }}</dd></div>
+        <div><dt>אתר</dt><dd>{% if service.website %}<a href="{{ service.website }}" target="_blank" rel="noopener">{{ service.website }}</a>{% else %}—{% endif %}</dd></div>
+        <div><dt>שעות</dt><dd>{{ service.hours or '—' }}</dd></div>
+        <div><dt>דרך הפניה</dt><dd>{{ service.referral_process or '—' }}</dd></div>
+        <div><dt>מנהל/ת</dt><dd>{{ service.manager or '—' }}</dd></div>
+      </dl>
+    </div>
+    <div class="panel">
+      <h2>זכאות, עלות וקהל יעד</h2>
+      <dl class="facts stacked">
+        <div><dt>עלות</dt><dd>{{ service.cost_info or COST_TYPES.get(service.cost_type, service.cost_type) or '—' }}</dd></div>
+        <div><dt>זכאות</dt><dd>{{ service.eligibility or '—' }}</dd></div>
+        <div><dt>רשימת המתנה</dt><dd>{{ service.waitlist_info or '—' }}</dd></div>
+        <div><dt>קהל יעד</dt><dd>{{ service.target_audience or '—' }}</dd></div>
+        <div><dt>גיל / מגדר / מגזר</dt><dd>{{ AGE_GROUPS.get(service.age_group, service.age_group) }} · {{ GENDERS.get(service.gender, service.gender) }} · {{ SECTORS.get(service.sector, service.sector) }}</dd></div>
+        <div><dt>שפות</dt><dd>{{ as_list(service.languages)|join(', ') or '—' }}</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>סוגי מענה</h2>
+    <p class="tags">
+      {% for t in as_list(service.addiction_types) %}
+        <span>{{ ADDICTION_TYPES.get(t, t) }}</span>
+      {% endfor %}
+    </p>
+    {% if service.notes %}<p class="notes">{{ service.notes }}</p>{% endif %}
+  </section>
+
+  <section class="panel provenance">
+    <h2>מקור, עדכון וודאות</h2>
+    <p>
+      מקור מוביל: <strong>{{ service.source_name or '—' }}</strong>
+      · רמת ודאות: <strong>{{ CONFIDENCE.get(service.confidence, service.confidence) }}</strong>
+      · עדכון אחרון: {{ service.last_updated.strftime('%d.%m.%Y %H:%M') if service.last_updated else '—' }}
+      {% if service.last_verified %} · אומת: {{ service.last_verified.strftime('%d.%m.%Y') }}{% endif %}
+    </p>
+    {% if service.source_url %}<p><a href="{{ service.source_url }}" target="_blank" rel="noopener">קישור למקור</a></p>{% endif %}
+    <ul>
+      {% for src in sources %}
+        <li>{{ src.name }} · {{ src.fetched_at.strftime('%d.%m.%Y') }} {% if src.url %}· <a href="{{ src.url }}" target="_blank" rel="noopener">מקור</a>{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% if conflicts %}
+      <h3>סתירות שיושבו</h3>
+      <ul>
+        {% for c in conflicts %}
+          <li>{{ c.field }}: רשמי «{{ c.official_value }}» / אחר «{{ c.other_value }}» ({{ c.other_source }})</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <h2>ציון איכות של עו״ס</h2>
+    <p class="muted">הציון הוא החלטת העו״ס בלבד, ומוצג לכל משתמשי המחשב הזה.</p>
+    <form class="rating-form" method="post" action="/services/{{ service.id }}/rating">
+      <div class="rating-choices" role="radiogroup" aria-label="ציון איכות">
+        {% for key, name in ratings.items() %}
+          <label class="rate {{ key }}">
+            <input type="radio" name="score" value="{{ key }}" {% if service.rating == key %}checked{% endif %} required>
+            <span>{{ name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <label class="grow">הערה
+        <textarea name="comment" rows="2">{{ service.rating_comment }}</textarea>
+      </label>
+      <button type="submit">שמירת ציון</button>
+    </form>
+  </section>
+</article>
+{% endblock %}

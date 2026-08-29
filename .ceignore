@@ -1,0 +1,14 @@
+.venv
+.git
+.env
+.env.*
+data
+*.db
+__pycache__
+*.pyc
+.idea
+.vscode
+*.log
+agent-transcripts
+terminals
+assets

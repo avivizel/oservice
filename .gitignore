@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.db-wal
+*.db-shm
+*.db.cos-snapshot
+data/
+.idea/
+.vscode/
+*.log
+.env
+.env.*
+!.env.example

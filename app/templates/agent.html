@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}תור הסוכן{% endblock %}
+{% block body %}
+<section class="hero compact">
+  <h1>תור אישור</h1>
+  <p>שום רשומה מסריקה לא נכנסת לפורטל בלי אישור. בסתירה — גורם רשמי של המדינה גובר, והעו״ס מאשר את המיזוג.</p>
+</section>
+
+<div class="toolbar">
+    <select name="status" onchange="this.form.submit()">
+      <option value="pending" {% if status == 'pending' %}selected{% endif %}>ממתין</option>
+      <option value="approved" {% if status == 'approved' %}selected{% endif %}>אושר</option>
+      <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>נדחה</option>
+      <option value="all" {% if status == 'all' %}selected{% endif %}>הכל</option>
+    </select>
+    <select name="action" onchange="this.form.submit()">
+      <option value="">כל הפעולות</option>
+      {% for key, name in actions.items() %}
+        <option value="{{ key }}" {% if action == key %}selected{% endif %}>{{ name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <form method="post" action="/agent/bulk-approve" onsubmit="return confirm('לאשר את כל הרשומות הממתינות ולהסיר אותן מהתור?');">
+    <button type="submit">אישור כל הרשומות</button>
+  </form>
+  <a class="btn" href="/agent/scan">סריקה חדשה</a>
+</div>
+
+{% if scans %}
+  <p class="muted">סריקה אחרונה: {{ scans[0].started_at.strftime('%d.%m.%Y %H:%M') }} · {{ scans[0].status }}</p>
+{% endif %}
+
+{% if not items %}
+  <div class="empty">
+    <h2>אין פריטים בתור</h2>
+    <p>הריצו סריקה כדי למשוך אשפוזיות, בתים מאזנים ומקורות ציבוריים.</p>
+  </div>
+{% endif %}
+
+<div class="queue">
+  {% for cand, payload, diffs in items %}
+  <article class="card queue-item action-{{ cand.action }}">
+    <div class="card-top">
+      <h2>{{ cand.name }}</h2>
+      <span class="pill">{{ CANDIDATE_ACTIONS.get(cand.action, cand.action) }}</span>
+    </div>
+    <p class="meta">{{ authorities.get(cand.authority, cand.authority) }} · {{ cand.source_name }} · ודאות {{ CONFIDENCE.get(cand.confidence, cand.confidence) }}</p>
+    <p>{{ cand.notes }}</p>
+    <dl class="facts">
+      {% if payload.city %}<div><dt>עיר</dt><dd>{{ payload.city }}</dd></div>{% endif %}
+      {% if payload.phone %}<div><dt>טלפון</dt><dd>{{ payload.phone }}</dd></div>{% endif %}
+      {% if payload.address %}<div><dt>כתובת</dt><dd>{{ payload.address }}</dd></div>{% endif %}
+      {% if payload.email %}<div><dt>דוא״ל</dt><dd>{{ payload.email }}</dd></div>{% endif %}
+    </dl>
+    {% if diffs %}
+      <table class="diff">
+        <thead><tr><th>שדה</th><th>במאגר</th><th>מהמקור</th></tr></thead>
+        <tbody>
+          {% for d in diffs %}
+          <tr>
+            <td>{{ d.field }}</td>
+            <td>{{ d.existing or '—' }}</td>
+            <td>{{ d.incoming }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
+    {% if cand.status == 'pending' %}
+    <div class="card-actions">
+      <form method="post" action="/agent/candidates/{{ cand.id }}/approve"><button type="submit">אישור</button></form>
+      <form method="post" action="/agent/candidates/{{ cand.id }}/reject"><button class="danger" type="submit">דחייה</button></form>
+    </div>
+    {% else %}
+      <p class="muted">סטטוס: {{ cand.status }}</p>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>
+{% endblock %}

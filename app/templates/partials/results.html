@@ -1,0 +1,38 @@
+<div class="count">{{ services|length }} מענים{% if services|length > 60 %} · מוצגים 60 הראשונים, צמצמו סינון לראות את השאר{% endif %}</div>
+{% if not services %}
+  <div class="empty">
+    <h2>אין רשומות תואמות</h2>
+    <p>נסו לאפס סינון, להוסיף שירות ידנית, או להריץ סריקה ממקורות רשמיים.</p>
+    <a class="btn" href="/agent/scan">הרצת סריקה</a>
+  </div>
+{% endif %}
+<div class="cards">
+  {% for s in services[:60] %}
+  <article class="card">
+    <div class="card-top">
+      <a href="/services/{{ s.id }}"><h2>{{ s.name }}</h2></a>
+      {% if s.rating %}<span class="pill rating-{{ s.rating }}">{{ RATINGS.get(s.rating, s.rating) }}</span>{% endif %}
+    </div>
+    <p class="meta">
+      {{ ORG_TYPES.get(s.org_type, s.org_type) }} · {{ SERVICE_KINDS.get(s.kind, s.kind) }}
+      {% if s.city %} · {{ s.city }}{% endif %}
+    </p>
+    <p class="tags">
+      {% for t in as_list(s.addiction_types) %}
+        <span>{{ ADDICTION_TYPES.get(t, t) }}</span>
+      {% endfor %}
+    </p>
+    <dl class="facts">
+      {% if s.phone %}<div><dt>טלפון</dt><dd><a href="tel:{{ s.phone }}">{{ s.phone }}</a></dd></div>{% endif %}
+      {% if s.cost_info or s.cost_type %}<div><dt>עלות</dt><dd>{{ s.cost_info or COST_TYPES.get(s.cost_type, s.cost_type) }}</dd></div>{% endif %}
+      <div><dt>ודאות</dt><dd>{{ CONFIDENCE.get(s.confidence, s.confidence) }}</dd></div>
+      <div><dt>עדכון</dt><dd>{{ s.last_updated.strftime('%d.%m.%Y') if s.last_updated else '—' }}</dd></div>
+    </dl>
+    <div class="card-actions">
+      {% if s.phone %}<a class="btn call-btn" href="tel:{{ s.phone }}">חיוג {{ s.phone }}</a>{% endif %}
+      <a href="/services/{{ s.id }}">כרטיס מלא</a>
+      {% if s.id in fav_ids %}<span class="muted">במועדפים</span>{% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>

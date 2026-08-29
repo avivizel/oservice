@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block body %}
+<h1>{{ title }}</h1>
+{% if not service %}
+<section class="panel import-url">
+  <h2>שליפה מדף אינטרנט</h2>
+  <p>הזינו כתובת של דף עם פרטי הארגון. המערכת תשלוף את השם, הטלפון, הכתובת והפרטים שמופיעים בדף ותוסיף אותם למאגר.</p>
+  {% if import_error %}<p class="form-error">{{ import_error }}</p>{% endif %}
+  <form class="import-url-form" method="post" action="/services/import-url">
+    <label>כתובת הדף
+      <input type="text" name="source_url" required placeholder="https://" value="{{ import_url or '' }}" dir="ltr" inputmode="url" autocomplete="url">
+    </label>
+    <button type="submit">שליפה והוספה למאגר</button>
+  </form>
+</section>
+{% endif %}
+<form class="edit-form" method="post" action="/services/save">
+  {% if service %}<input type="hidden" name="id" value="{{ service.id }}">{% endif %}
+  <label>שם השירות
+    <input name="name" required value="{{ service.name if service else '' }}">
+  </label>
+  <div class="grid-3">
+    <label>סוג גוף
+      <select name="org_type">
+        {% for key, name in org_types.items() %}
+          <option value="{{ key }}" {% if service and service.org_type == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>סוג שירות
+      <select name="kind">
+        {% for key, name in kinds.items() %}
+          <option value="{{ key }}" {% if service and service.kind == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>מחוז
+      <select name="district">
+        <option value="">לא צוין</option>
+        {% for key, name in districts.items() %}
+          <option value="{{ key }}" {% if service and service.district == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <label>כתובת<input name="address" value="{{ service.address if service else '' }}"></label>
+  <div class="grid-3">
+    <label>עיר
+      <input name="city" list="city-list" value="{{ service.city if service else '' }}" autocomplete="off">
+      <datalist id="city-list">
+        {% for city in cities %}
+          <option value="{{ city }}"></option>
+        {% endfor %}
+      </datalist>
+    </label>
+    <label>טלפון<input name="phone" value="{{ service.phone if service else '' }}"></label>
+    <label>טלפון נוסף<input name="phone2" value="{{ service.phone2 if service else '' }}"></label>
+  </div>
+  <div class="grid-3">
+    <label>דוא״ל<input name="email" value="{{ service.email if service else '' }}"></label>
+    <label>אתר<input name="website" value="{{ service.website if service else '' }}"></label>
+    <label>שעות<input name="hours" value="{{ service.hours if service else '' }}"></label>
+  </div>
+  <fieldset>
+    <legend>סוגי התמכרות / מענה</legend>
+    {% set selected = as_list(service.addiction_types) if service else [] %}
+    {% for key, name in addiction_types.items() %}
+      <label class="inline"><input type="checkbox" name="addiction_types" value="{{ key }}" {% if key in selected %}checked{% endif %}> {{ name }}</label>
+    {% endfor %}
+  </fieldset>
+  <div class="grid-3">
+    <label>עלות
+      <select name="cost_type">
+        <option value="">לא צוין</option>
+        {% for key, name in cost_types.items() %}
+          <option value="{{ key }}" {% if service and service.cost_type == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>גיל
+      <select name="age_group">
+        {% for key, name in age_groups.items() %}
+          <option value="{{ key }}" {% if service and service.age_group == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>מגדר
+      <select name="gender">
+        {% for key, name in genders.items() %}
+          <option value="{{ key }}" {% if service and service.gender == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <label>פירוט עלות<textarea name="cost_info" rows="2">{{ service.cost_info if service else '' }}</textarea></label>
+  <label>זכאות<textarea name="eligibility" rows="2">{{ service.eligibility if service else '' }}</textarea></label>
+  <label>דרך הפניה<textarea name="referral_process" rows="2">{{ service.referral_process if service else '' }}</textarea></label>
+  <label>קהל יעד<textarea name="target_audience" rows="2">{{ service.target_audience if service else '' }}</textarea></label>
+  <label>רשימת המתנה<textarea name="waitlist_info" rows="2">{{ service.waitlist_info if service else '' }}</textarea></label>
+  <label>שפות (מופרדות בפסיק)<input name="languages" value="{{ as_list(service.languages)|join(', ') if service else 'עברית' }}"></label>
+  <label>הערות<textarea name="notes" rows="3">{{ service.notes if service else '' }}</textarea></label>
+  <div class="grid-3">
+    <label>רישוי<input name="licensing" value="{{ service.licensing if service else '' }}"></label>
+    <label>מקור<input name="source_name" value="{{ service.source_name if service else 'הזנה ידנית' }}"></label>
+    <label>קישור מקור<input name="source_url" value="{{ service.source_url if service else '' }}"></label>
+  </div>
+  <div class="grid-3">
+    <label>מגזר
+      <select name="sector">
+        {% for key, name in sectors.items() %}
+          <option value="{{ key }}" {% if service and service.sector == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>סמכות
+      <select name="authority">
+        {% for key, name in OFFICIAL_AUTHORITIES.items() %}
+          <option value="{{ key }}" {% if service and service.authority == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>ודאות
+      <select name="confidence">
+        {% for key, name in confidence.items() %}
+          <option value="{{ key }}" {% if service and service.confidence == key %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+  <label>מנהל/ת<input name="manager" value="{{ service.manager if service else '' }}"></label>
+  <button type="submit">שמירה לפורטל</button>
+</form>
+{% endblock %}

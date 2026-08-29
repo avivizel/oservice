@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}חיפוש מענים{% endblock %}
+{% block body %}
+<section class="hero">
+  <h1>למצוא את המענה המתאים להתמכרות</h1>
+  <p>שירותים ציבוריים ומסגרות פרטיות מפוקחות בישראל — לפי סוג התמכרות, אזור וסוג טיפול.</p>
+</section>
+
+{% set extra_open = params.get('addiction') or params.get('org_type') or params.get('kind') or params.get('district') or params.get('city') or params.get('cost_type') or params.get('age_group') or params.get('gender') or params.get('sector') or params.get('rating') %}
+<form id="filters" class="search-form" method="get" action="/"
+      hx-get="/" hx-target="#results" hx-select="#results" hx-push-url="true" hx-trigger="change delay:200ms, search">
+  <div class="search-bar">
+    <label>
+      חיפוש חופשי
+      <input type="search" name="q" value="{{ params.get('q', '') }}" placeholder="שם, עיר, טלפון, קהל יעד…">
+    </label>
+  </div>
+
+  <section class="filter-panel">
+    <div class="filter-panel-head">סינון תוצאות</div>
+    <details class="more-filters"{% if extra_open or not is_mobile %} open{% endif %}>
+      <summary>הצגת כל הפילטרים</summary>
+      <div class="filter-grid">
+        <label>
+          סוג התמכרות / מענה
+          <select name="addiction">
+            <option value="">הכל</option>
+            {% for key, name in addiction_types.items() %}
+              <option value="{{ key }}" {% if params.get('addiction') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          סוג גוף
+          <select name="org_type">
+            <option value="">הכל</option>
+            {% for key, name in org_types.items() %}
+              <option value="{{ key }}" {% if params.get('org_type') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          סוג שירות
+          <select name="kind">
+            <option value="">הכל</option>
+            {% for key, name in kinds.items() %}
+              <option value="{{ key }}" {% if params.get('kind') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          מחוז
+          <select name="district">
+            <option value="">הכל</option>
+            {% for key, name in districts.items() %}
+              <option value="{{ key }}" {% if params.get('district') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          עיר
+          <select name="city">
+            <option value="">הכל</option>
+            {% for city in cities %}
+              <option value="{{ city }}" {% if params.get('city') == city %}selected{% endif %}>{{ city }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          עלות
+          <select name="cost_type">
+            <option value="">הכל</option>
+            {% for key, name in cost_types.items() %}
+              <option value="{{ key }}" {% if params.get('cost_type') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          גיל
+          <select name="age_group">
+            <option value="">הכל</option>
+            {% for key, name in age_groups.items() %}
+              <option value="{{ key }}" {% if params.get('age_group') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          מגדר
+          <select name="gender">
+            <option value="">הכל</option>
+            {% for key, name in genders.items() %}
+              <option value="{{ key }}" {% if params.get('gender') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          מגזר
+          <select name="sector">
+            <option value="">הכל</option>
+            {% for key, name in sectors.items() %}
+              <option value="{{ key }}" {% if params.get('sector') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          ציון עו״ס
+          <select name="rating">
+            <option value="">הכל</option>
+            {% for key, name in ratings.items() %}
+              <option value="{{ key }}" {% if params.get('rating') == key %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          מיון
+          <select name="sort">
+            <option value="name" {% if params.get('sort') == 'name' %}selected{% endif %}>שם</option>
+            <option value="city" {% if params.get('sort') == 'city' %}selected{% endif %}>עיר</option>
+            <option value="updated" {% if params.get('sort') == 'updated' %}selected{% endif %}>עדכון אחרון</option>
+            <option value="rating" {% if params.get('sort') == 'rating' %}selected{% endif %}>ציון</option>
+            <option value="kind" {% if params.get('sort') == 'kind' %}selected{% endif %}>סוג שירות</option>
+            <option value="confidence" {% if params.get('sort') == 'confidence' %}selected{% endif %}>ודאות</option>
+          </select>
+        </label>
+      </div>
+    </details>
+    <div class="filter-actions">
+      <button type="submit">הצג</button>
+      <a class="btn ghost" href="/">איפוס</a>
+    </div>
+  </section>
+</form>
+
+<div id="results">
+  {% include "partials/results.html" %}
+</div>
+{% endblock %}
