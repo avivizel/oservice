@@ -12,7 +12,7 @@ There is **no login**. Anyone with the URL can use it. Treat it as an internal p
 - **Host:** Render (Frankfurt), service `maaneim` — free instance, one replica
 - **Database of record:** IBM Cloud Object Storage (Frankfurt / `eu-de`), object `maaneim.db`
 
-Contact on the site footer: רונית גרינברג ויזל, רכזת התמכרויות, האגף לשירותים חברתיים, עיריית תל אביב-יפו — [grinberg_r@mail.tel-aviv.gov.il](mailto:grinberg_r@mail.tel-aviv.gov.il)
+Contact on the site footer: רונית גרינברג ויזל — [ronitgrinbergv@gmail.com](mailto:ronitgrinbergv@gmail.com)
 
 ---
 
