@@ -53,8 +53,10 @@ h2 { margin: 1.6rem 0 .6rem; font-size: 1.15rem; }
 }
 .sheet-head h1 { margin: 0 0 .25rem; }
 .sheet-head .lede { margin: 0; max-width: 52rem; }
+.sheet-tools { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: flex-end; }
 .sheet-search { min-width: min(100%, 280px); }
 .sheet-search input { background: #fff; color: #1b2430; border-color: #9aa8b5; }
+.sheet-tools .btn { white-space: nowrap; }
 .sheet-meta { color: #9aa8b5; margin: .55rem 0 .45rem; }
 .sheet-wrap {
   flex: 1;

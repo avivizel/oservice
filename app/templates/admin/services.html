@@ -57,9 +57,12 @@
     <h1>מענים</h1>
     <p class="lede">כל מענה בשורה אחת, עם כל הפרטים מהכרטיס הציבורי. מתקנים תא, לוחצים <strong>שמירה</strong> באותה שורה. אין צורך לעבור מסך.</p>
   </div>
-  <label class="sheet-search">חיפוש לפי שם, יישוב או טלפון
-    <input type="search" id="sheet-q" placeholder="למשל: רעננה, דיור, 09-" autocomplete="off">
-  </label>
+  <div class="sheet-tools">
+    <a class="btn" href="/admin/services.xlsx">ייצוא Excel</a>
+    <label class="sheet-search">חיפוש לפי שם, יישוב או טלפון
+      <input type="search" id="sheet-q" placeholder="למשל: רעננה, דיור, 09-" autocomplete="off">
+    </label>
+  </div>
 </div>
 {% if error %}<p class="err">{{ error }}</p>{% endif %}
 {% if notice %}<p class="ok">{{ notice }}</p>{% endif %}

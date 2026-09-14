@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta
+from io import BytesIO
 from typing import Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from sqlalchemy import DateTime, Float, Integer, Boolean, Text, inspect as sa_inspect, func
 from sqlalchemy.orm import Session, selectinload
 
@@ -657,9 +658,99 @@ def _services_page(request: Request, admin: AdminUser, db: Session, extra: dict 
     return templates.TemplateResponse(request, "admin/services.html", _ctx(request, data))
 
 
+def _excel_cell(service: Service, field: dict[str, Any]) -> str:
+    key = field["key"]
+    if key == "sources_text":
+        text = _service_values(service).get("sources_text") or ""
+        return "" if text == "—" else text
+    if key == "last_updated":
+        return _fmt_dt(service.last_updated)
+    if key == "last_verified":
+        return _fmt_dt(service.last_verified)
+    if field["kind"] == "list":
+        return _list_display(getattr(service, key, ""), SERVICE_LISTS.get(key))
+    raw = getattr(service, key, None)
+    if raw is None:
+        return ""
+    text = str(raw).strip()
+    if field["kind"] == "select":
+        if not text:
+            return ""
+        return SERVICE_SELECTS.get(key, {}).get(text, text)
+    return text
+
+
 @router.get("/services", response_class=HTMLResponse)
 def services_sheet(request: Request, db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)):
     return _services_page(request, admin, db)
+
+
+@router.get("/services.xlsx")
+def services_export_xlsx(db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)):
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    rows = (
+        db.query(Service)
+        .options(selectinload(Service.sources))
+        .order_by(Service.name, Service.city, Service.id)
+        .all()
+    )
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "מענים"
+    ws.sheet_view.rightToLeft = True
+    group_fills = {
+        "identity": "D7E8FB",
+        "contact": "DCEFE3",
+        "audience": "F4E6D4",
+        "types": "E8DEF4",
+        "source": "D9EAF2",
+        "rating": "F3DDE3",
+    }
+    header_font = Font(bold=True)
+    wrap = Alignment(wrap_text=True, vertical="top", horizontal="right")
+    col = 1
+    for group in SERVICE_GROUPS:
+        start = col
+        for field in group["fields"]:
+            cell = ws.cell(1, col, group["title"])
+            cell.font = header_font
+            cell.fill = PatternFill("solid", fgColor=group_fills.get(group["id"], "EEEEEE"))
+            label = ws.cell(2, col, field["label"])
+            label.font = header_font
+            label.fill = PatternFill("solid", fgColor=group_fills.get(group["id"], "EEEEEE"))
+            width = 18
+            if field.get("cls") == "col-wide":
+                width = 28
+            elif field.get("cls") in {"col-id", "col-date"}:
+                width = 14
+            elif field.get("cls") == "col-name":
+                width = 32
+            ws.column_dimensions[get_column_letter(col)].width = width
+            col += 1
+        if col - 1 > start:
+            ws.merge_cells(start_row=1, start_column=start, end_row=1, end_column=col - 1)
+    for index, service in enumerate(rows, start=3):
+        excel_col = 1
+        for group in SERVICE_GROUPS:
+            for field in group["fields"]:
+                cell = ws.cell(index, excel_col, _excel_cell(service, field))
+                cell.alignment = wrap
+                excel_col += 1
+    last_col = get_column_letter(col - 1)
+    ws.freeze_panes = "A3"
+    ws.auto_filter.ref = f"A2:{last_col}{max(2, len(rows) + 2)}"
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"maaneim-admin-{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/services/new")
