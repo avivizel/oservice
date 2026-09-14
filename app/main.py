@@ -52,7 +52,7 @@ app.include_router(admin.router)
 @app.middleware("http")
 async def record_access(request: Request, call_next):
     response = await call_next(request)
-    access_log.record(request.method, request.url.path, response.status_code)
+    access_log.record(request, response.status_code)
     return response
 
 

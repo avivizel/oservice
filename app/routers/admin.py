@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from io import BytesIO
 from typing import Any
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
-from sqlalchemy import DateTime, Float, Integer, Boolean, Text, inspect as sa_inspect, func
+from sqlalchemy import DateTime, Float, Integer, Boolean, Text, inspect as sa_inspect
 from sqlalchemy.orm import Session, selectinload
 
 from app.admin_auth import (
@@ -35,9 +35,10 @@ from app.catalogs import (
     STATUSES,
 )
 from app.db import get_db
-from app.models import AccessEvent, AdminUser, Base, Service, ServiceSource
+from app.models import AdminUser, Base, Service, ServiceSource
 from app.query import as_list
 from app.templates_env import templates
+from app import access_log
 
 router = APIRouter(prefix="/admin")
 
@@ -542,45 +543,45 @@ def logout(request: Request):
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)):
-    since = datetime.utcnow() - timedelta(days=30)
-    day_rows = (
-        db.query(func.date(AccessEvent.occurred_at), func.count())
-        .filter(AccessEvent.occurred_at >= since)
-        .group_by(func.date(AccessEvent.occurred_at))
-        .order_by(func.date(AccessEvent.occurred_at))
-        .all()
-    )
-    total = db.query(func.count(AccessEvent.id)).scalar() or 0
-    today = datetime.utcnow().strftime("%Y-%m-%d")
-    today_count = (
-        db.query(func.count(AccessEvent.id)).filter(func.date(AccessEvent.occurred_at) == today).scalar() or 0
-    )
-    top_paths = (
-        db.query(AccessEvent.path, func.count())
-        .filter(AccessEvent.occurred_at >= since)
-        .group_by(AccessEvent.path)
-        .order_by(func.count().desc())
-        .limit(20)
-        .all()
-    )
-    max_day = max((int(c) for _, c in day_rows), default=1) or 1
-    days = [
-        {"day": str(day), "count": int(count), "pct": round(100 * int(count) / max_day)}
-        for day, count in day_rows
-    ]
+    report = access_log.usage_from_db(db)
     return templates.TemplateResponse(
         request,
         "admin/dashboard.html",
-        _ctx(
-            request,
-            {
-                "admin": admin,
-                "total": total,
-                "today_count": today_count,
-                "days": days,
-                "top_paths": [{"path": p, "count": int(c)} for p, c in top_paths],
-            },
-        ),
+        _ctx(request, {"admin": admin, **report}),
+    )
+
+
+@router.get("/usage.xlsx")
+def usage_export_xlsx(db: Session = Depends(get_db), admin: AdminUser = Depends(require_admin)):
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    report = access_log.usage_from_db(db)
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "גישה לאתר"
+    ws.sheet_view.rightToLeft = True
+    ws.append(["דוח גישה לאתר מענים"])
+    ws.append(["פנייה = אדם מאותה כתובת רשת. חזרה אחרי 30 דקות בלי פעילות נספרת כפנייה חדשה."])
+    ws.append([])
+    ws.append(["היום", report["today"]])
+    ws.append(["אנשים היום", report["today_people"]])
+    ws.append(["כניסות היום", report["today_visits"]])
+    ws.append(["אנשים ב־30 יום", report["total_people"]])
+    ws.append(["כניסות ב־30 יום", report["total_visits"]])
+    ws.append([])
+    ws.append(["יום", "אנשים", "כניסות לאתר"])
+    for row in report["days"]:
+        ws.append([row["day"], row["people"], row["visits"]])
+    ws["A1"].font = Font(bold=True)
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"maaneim-usage-{datetime.now().strftime('%Y%m%d')}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

@@ -72,6 +72,9 @@ def _migrate() -> None:
         for name, ddl in extras.items():
             if name not in existing:
                 conn.execute(text(f"ALTER TABLE services ADD COLUMN {name} {ddl}"))
+        access_cols = {row[1] for row in conn.execute(text("PRAGMA table_info(access_events)"))}
+        if access_cols and "ip" not in access_cols:
+            conn.execute(text("ALTER TABLE access_events ADD COLUMN ip VARCHAR(80) DEFAULT ''"))
 
 
 @event.listens_for(Session, "after_commit")

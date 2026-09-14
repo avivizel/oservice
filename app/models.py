@@ -208,3 +208,4 @@ class AccessEvent(Base):
     method: Mapped[str] = mapped_column(String(12), default="GET")
     path: Mapped[str] = mapped_column(String(500), default="", index=True)
     status: Mapped[int] = mapped_column(Integer, default=200)
+    ip: Mapped[str] = mapped_column(String(80), default="", index=True)

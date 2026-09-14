@@ -1,40 +1,31 @@
 {% extends "admin/base.html" %}
 {% block title %}לוח שימוש{% endblock %}
 {% block body %}
-<h1>לוח שימוש</h1>
-<p class="lede">כל בקשות ה-HTTP (כולל HTMX), בלי קבצים סטטיים. 30 הימים האחרונים.</p>
+<h1>גישה לאתר</h1>
+<p class="lede">כמה אנשים השתמשו בפורטל — לא כמה דפים נפתחו. אותה כתובת רשת נספרת כפנייה אחת, כל עוד לא עברו 30 דקות בלי פעילות. חזרה אחרי חצי שעה נספרת כפנייה חדשה. בדיקות שרת ומסך הניהול לא נספרים.</p>
+<p><a class="btn" href="/admin/usage.xlsx">ייצוא Excel</a></p>
 <div class="stats">
-  <div class="stat"><span>היום</span><strong>{{ today_count }}</strong></div>
-  <div class="stat"><span>סה״כ ביומן</span><strong>{{ total }}</strong></div>
+  <div class="stat"><span>אנשים היום</span><strong>{{ today_people }}</strong></div>
+  <div class="stat"><span>כניסות היום</span><strong>{{ today_visits }}</strong></div>
+  <div class="stat"><span>אנשים · 30 יום</span><strong>{{ total_people }}</strong></div>
+  <div class="stat"><span>כניסות · 30 יום</span><strong>{{ total_visits }}</strong></div>
 </div>
-<h2>גישות לפי יום</h2>
+<h2>לפי יום</h2>
 {% if days %}
 <table class="grid">
-  <thead><tr><th>יום</th><th>גישות</th><th></th></tr></thead>
+  <thead><tr><th>יום</th><th>אנשים</th><th>כניסות לאתר</th><th></th></tr></thead>
   <tbody>
   {% for row in days %}
     <tr>
       <td>{{ row.day }}</td>
-      <td>{{ row.count }}</td>
+      <td>{{ row.people }}</td>
+      <td>{{ row.visits }}</td>
       <td class="bar"><span style="width: {{ row.pct }}%"></span></td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 {% else %}
-<p>אין עדיין נתונים. הם נשמרים כל כדקה.</p>
-{% endif %}
-<h2>נתיבים נפוצים</h2>
-{% if top_paths %}
-<table class="grid">
-  <thead><tr><th>נתיב</th><th>גישות</th></tr></thead>
-  <tbody>
-  {% for row in top_paths %}
-    <tr><td class="mono">{{ row.path }}</td><td>{{ row.count }}</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% else %}
-<p>אין עדיין נתונים.</p>
+<p>אין עדיין כניסות של משתמשים. הספירה החדשה נספרת מכאן והלאה; היטים ישנים של דפים לא נכללים.</p>
 {% endif %}
 {% endblock %}
