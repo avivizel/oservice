@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block title %}מסד נתונים{% endblock %}
+{% block body %}
+<h1>מסד נתונים</h1>
+<p class="lede">כל הטבלאות, כל השורות. ללא טעינה עצלה.</p>
+<table class="grid">
+  <thead><tr><th>טבלה</th><th>שם</th><th>שורות</th></tr></thead>
+  <tbody>
+  {% for item in counts %}
+    <tr>
+      <td class="mono"><a href="/admin/db/{{ item.name }}">{{ item.name }}</a></td>
+      <td>{{ item.label }}</td>
+      <td>{{ item.count }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}{% if creating %}חדש{% else %}עריכה{% endif %} · {{ label }}{% endblock %}
+{% block body %}
+<p class="crumb"><a href="/admin/db">מסד נתונים</a> / <a href="/admin/db/{{ table }}">{{ label }}</a></p>
+<h1>{% if creating %}שורת חדשה{% else %}עריכת #{{ row_id }}{% endif %} · {{ label }}</h1>
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+<form method="post" class="stack">
+  {% for field in fields %}
+    {% set val = values.get(field.key, '') %}
+    {% if field.kind == 'bool' %}
+      <label class="check">
+        <input type="checkbox" name="{{ field.key }}" {% if val %}checked{% endif %}>
+        {{ field.key }}
+      </label>
+    {% elif field.kind == 'password' %}
+      <label>{{ field.key }} (ריק = בלי שינוי)
+        <input type="password" name="password" autocomplete="new-password">
+      </label>
+    {% elif field.kind == 'textarea' %}
+      <label>{{ field.key }}
+        <textarea name="{{ field.key }}" rows="4">{{ val }}</textarea>
+      </label>
+    {% elif field.kind == 'datetime' %}
+      <label>{{ field.key }}
+        <input type="datetime-local" name="{{ field.key }}" value="{{ val }}">
+      </label>
+    {% elif field.kind == 'int' or field.kind == 'float' %}
+      <label>{{ field.key }}
+        <input name="{{ field.key }}" value="{{ val }}" inputmode="decimal">
+      </label>
+    {% else %}
+      <label>{{ field.key }}
+        <input name="{{ field.key }}" value="{{ val }}">
+      </label>
+    {% endif %}
+  {% endfor %}
+  <button type="submit">שמירה</button>
+</form>
+{% endblock %}

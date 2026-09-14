@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block title %}לוח שימוש{% endblock %}
+{% block body %}
+<h1>לוח שימוש</h1>
+<p class="lede">כל בקשות ה-HTTP (כולל HTMX), בלי קבצים סטטיים. 30 הימים האחרונים.</p>
+<div class="stats">
+  <div class="stat"><span>היום</span><strong>{{ today_count }}</strong></div>
+  <div class="stat"><span>סה״כ ביומן</span><strong>{{ total }}</strong></div>
+</div>
+<h2>גישות לפי יום</h2>
+{% if days %}
+<table class="grid">
+  <thead><tr><th>יום</th><th>גישות</th><th></th></tr></thead>
+  <tbody>
+  {% for row in days %}
+    <tr>
+      <td>{{ row.day }}</td>
+      <td>{{ row.count }}</td>
+      <td class="bar"><span style="width: {{ row.pct }}%"></span></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>אין עדיין נתונים. הם נשמרים כל כדקה.</p>
+{% endif %}
+<h2>נתיבים נפוצים</h2>
+{% if top_paths %}
+<table class="grid">
+  <thead><tr><th>נתיב</th><th>גישות</th></tr></thead>
+  <tbody>
+  {% for row in top_paths %}
+    <tr><td class="mono">{{ row.path }}</td><td>{{ row.count }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>אין עדיין נתונים.</p>
+{% endif %}
+{% endblock %}

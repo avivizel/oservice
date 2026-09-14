@@ -48,11 +48,13 @@ def persist_sqlite() -> None:
 def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     _migrate()
+    from app.admin_auth import seed_admin
     from app.localities import seed_localities
 
     db = SessionLocal()
     try:
         seed_localities(db)
+        seed_admin(db)
     finally:
         db.close()
 

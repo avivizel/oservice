@@ -1,0 +1,30 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ label }}{% endblock %}
+{% block body %}
+<p class="crumb"><a href="/admin/db">מסד נתונים</a> / {{ label }}</p>
+<h1>{{ label }} <span class="mono dim">{{ table }}</span></h1>
+<p class="lede">{{ count }} שורות · נטען הכל, כולל קשרי SQLAlchemy ברמה אחת.</p>
+<p><a class="btn" href="/admin/db/{{ table }}/new">שורת חדשה</a></p>
+<div class="scroll">
+<table class="grid">
+  <thead>
+    <tr>
+      {% for field in fields %}<th>{{ field.key }}</th>{% endfor %}
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      {% for cell in row.cells %}<td>{{ cell }}</td>{% endfor %}
+      <td class="nowrap">
+        {% if row.id is not none %}
+        <a href="/admin/db/{{ table }}/{{ row.id }}">פתח</a>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+body { margin: 0; font-family: Segoe UI, Arial, sans-serif; background: #11161c; color: #e8edf2; }
+a { color: #8ec8ff; }
+.admin-shell { display: flex; min-height: 100vh; }
+.admin-side { width: 220px; background: #0b1016; padding: 1.2rem 1rem; display: flex; flex-direction: column; gap: 1rem; }
+.admin-side .brand { font-weight: 700; margin: 0 0 .5rem; }
+.admin-side nav { display: flex; flex-direction: column; gap: .35rem; }
+.admin-side a { text-decoration: none; padding: .35rem .5rem; border-radius: 6px; color: #c5d0da; }
+.admin-side a.on, .admin-side a:hover { background: #1c2733; color: #fff; }
+.admin-main { flex: 1; padding: 1.5rem 2rem; overflow: auto; }
+.logout { margin-top: auto; }
+.logout button, .btn, button { background: #2b6cb0; color: #fff; border: 0; border-radius: 6px; padding: .45rem .8rem; cursor: pointer; text-decoration: none; display: inline-block; }
+.danger { background: #9b2c2c; margin-top: 1.5rem; }
+.login-wrap { min-height: 100vh; display: grid; place-items: center; }
+.login-card, .stack { display: flex; flex-direction: column; gap: .7rem; max-width: 420px; }
+.login-card { background: #1a222c; padding: 1.5rem; border-radius: 10px; width: min(90vw, 380px); }
+label { display: flex; flex-direction: column; gap: .3rem; font-size: .95rem; }
+input, textarea { background: #0b1016; color: #e8edf2; border: 1px solid #314050; border-radius: 6px; padding: .45rem .55rem; font: inherit; }
+.err { color: #ff8f8f; }
+.ok { color: #8fe3b0; }
+.lede, .dim, .crumb { color: #9aa8b5; }
+.mono { font-family: Consolas, monospace; }
+.stats { display: flex; gap: 1rem; margin: 1rem 0 1.5rem; }
+.stat { background: #1a222c; padding: 1rem 1.2rem; border-radius: 8px; min-width: 140px; }
+.stat span { display: block; color: #9aa8b5; font-size: .85rem; }
+.stat strong { font-size: 1.6rem; }
+.grid { border-collapse: collapse; width: 100%; }
+.grid th, .grid td { border-bottom: 1px solid #243040; padding: .4rem .5rem; text-align: right; vertical-align: top; }
+.grid th { color: #9aa8b5; font-weight: 600; }
+.scroll { overflow: auto; max-width: 100%; }
+.bar { width: 180px; }
+.bar span { display: block; height: 8px; background: #2b6cb0; border-radius: 4px; }
+.wrap { white-space: pre-wrap; word-break: break-word; }
+.nowrap { white-space: nowrap; }
+.check { flex-direction: row; align-items: center; }
+h1 { margin: .2rem 0 1rem; font-size: 1.5rem; }
+h2 { margin: 1.6rem 0 .6rem; font-size: 1.15rem; }

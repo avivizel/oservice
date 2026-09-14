@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ label }} #{{ row_id }}{% endblock %}
+{% block body %}
+<p class="crumb"><a href="/admin/db">מסד נתונים</a> / <a href="/admin/db/{{ table }}">{{ label }}</a> / #{{ row_id }}</p>
+<h1>{{ label }} #{{ row_id }}</h1>
+<p>
+  <a class="btn" href="/admin/db/{{ table }}/{{ row_id }}/edit">עריכה</a>
+</p>
+<table class="grid">
+  <thead><tr><th>שדה</th><th>ערך</th><th></th></tr></thead>
+  <tbody>
+  {% for pair in pairs %}
+    <tr>
+      <td class="mono">{{ pair.key }}</td>
+      <td class="wrap">{{ pair.value }}</td>
+      <td class="dim">{{ pair.extra }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<form method="post" action="/admin/db/{{ table }}/{{ row_id }}/delete" onsubmit="return confirm('למחוק את הרשומה?');">
+  <button type="submit" class="danger">מחיקה</button>
+</form>
+{% endblock %}

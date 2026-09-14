@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}ניהול{% endblock %}</title>
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+  {% if admin is defined and admin %}
+  <div class="admin-shell">
+    <aside class="admin-side">
+      <p class="brand">ניהול מענים</p>
+      <nav>
+        <a href="/admin" class="{% if request.url.path.rstrip('/') == '/admin' %}on{% endif %}">לוח שימוש</a>
+        <a href="/admin/db" class="{% if request.url.path.startswith('/admin/db') %}on{% endif %}">מסד נתונים</a>
+        <a href="/admin/account" class="{% if request.url.path.startswith('/admin/account') %}on{% endif %}">חשבון</a>
+      </nav>
+      <form method="post" action="/admin/logout" class="logout">
+        <button type="submit">יציאה</button>
+      </form>
+    </aside>
+    <div class="admin-main">
+      {% block body %}{% endblock %}
+    </div>
+  </div>
+  {% else %}
+  <div class="login-wrap">
+    {% block login %}{% endblock %}
+  </div>
+  {% endif %}
+</body>
+</html>

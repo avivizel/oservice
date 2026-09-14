@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block title %}כניסה לניהול{% endblock %}
+{% block login %}
+<form class="login-card" method="post" action="/admin/login">
+  <h1>ניהול</h1>
+  {% if error %}<p class="err">{{ error }}</p>{% endif %}
+  {% if request.query_params.get('next') %}
+  <input type="hidden" name="next" value="{{ request.query_params.get('next') }}">
+  {% endif %}
+  <label>משתמש
+    <input name="username" value="{{ username }}" autocomplete="username" required>
+  </label>
+  <label>סיסמה
+    <input name="password" type="password" autocomplete="current-password" required>
+  </label>
+  <button type="submit">כניסה</button>
+</form>
+{% endblock %}
