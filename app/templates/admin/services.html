@@ -1,0 +1,93 @@
+{% extends "admin/base.html" %}
+{% block title %}מענים{% endblock %}
+{% block body_class %}sheet-page{% endblock %}
+{% block body %}
+
+{% macro field_control(field, row, form_id) %}
+  {% set value = row.field_values[field.key] %}
+  {% if field.kind == 'readonly' %}
+    <span class="cell-ro" data-key="{{ field.key }}">{{ value or '—' }}</span>
+  {% elif field.kind == 'select' %}
+    <select name="{{ field.key }}" form="{{ form_id }}" title="{{ field.label }}">
+      {% if field.key in ['district', 'cost_type', 'rating', 'operator_type'] %}
+        <option value="">לא צוין</option>
+      {% endif %}
+      {% for key, label in selects[field.key].items() %}
+        <option value="{{ key }}" {% if value == key %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  {% elif field.kind == 'textarea' %}
+    <textarea name="{{ field.key }}" form="{{ form_id }}" rows="2" title="{{ field.label }}">{{ value }}</textarea>
+  {% elif field.kind == 'datetime' %}
+    <input type="datetime-local" name="{{ field.key }}" form="{{ form_id }}" value="{{ value }}" title="{{ field.label }}">
+  {% else %}
+    <input type="text" name="{{ field.key }}" form="{{ form_id }}" value="{{ value }}" title="{{ field.label }}" {% if field.required %}required{% endif %} {% if field.kind == 'ltr' %}dir="ltr"{% endif %} {% if field.key == 'name' %}class="name-input"{% endif %}>
+  {% endif %}
+{% endmacro %}
+
+{% macro service_row(row) %}
+  {% set form_id = 'svc-new' if row.creating else 'svc-' ~ row.id %}
+  {% set action = '/admin/services/new' if row.creating else '/admin/services/' ~ row.id %}
+  <tr id="{% if row.creating %}row-new{% else %}row-{{ row.id }}{% endif %}"
+      class="svc-row {% if row.creating %}row-new{% endif %}"
+      data-search="{{ row.search }}"
+      data-id="{{ row.id or '' }}"
+      data-creating="{{ '1' if row.creating else '0' }}">
+    {% for group in groups %}
+      {% for field in group.fields %}
+        <td class="{{ field.cls }} {% if field.key == 'id' %}sticky-id{% endif %} {% if field.key == 'name' %}sticky-name{% endif %}">
+          {{ field_control(field, row, form_id) }}
+        </td>
+      {% endfor %}
+    {% endfor %}
+    <td class="col-actions sticky-actions">
+      <form id="{{ form_id }}" class="svc-form" method="post" action="{{ action }}" autocomplete="off"></form>
+      <button type="submit" form="{{ form_id }}" class="btn save-btn">{{ 'הוספה' if row.creating else 'שמירה' }}</button>
+      {% if not row.creating %}
+      <form id="del-{{ row.id }}" class="del-form" method="post" action="/admin/services/{{ row.id }}/delete"></form>
+      <button type="submit" form="del-{{ row.id }}" class="btn danger del-btn" data-name="{{ row.field_values.name }}">מחיקה</button>
+      {% endif %}
+      <span class="row-msg {% if row.error %}err{% elif row.notice %}ok{% endif %}">{{ row.error or row.notice }}</span>
+    </td>
+  </tr>
+{% endmacro %}
+
+<div class="sheet-head">
+  <div>
+    <h1>מענים</h1>
+    <p class="lede">כל מענה בשורה אחת, עם כל הפרטים מהכרטיס הציבורי. מתקנים תא, לוחצים <strong>שמירה</strong> באותה שורה. אין צורך לעבור מסך.</p>
+  </div>
+  <label class="sheet-search">חיפוש לפי שם, יישוב או טלפון
+    <input type="search" id="sheet-q" placeholder="למשל: רעננה, דיור, 09-" autocomplete="off">
+  </label>
+</div>
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+{% if notice %}<p class="ok">{{ notice }}</p>{% endif %}
+<p class="sheet-meta"><span id="visible-count">{{ count }}</span> מתוך {{ count }} מענים · השורה הראשונה מוסיפה מענה חדש</p>
+
+<div class="sheet-wrap">
+  <table class="sheet">
+    <thead>
+      <tr class="group-row">
+        {% for group in groups %}
+          <th colspan="{{ group.fields|length }}" class="g-{{ group.id }}">{{ group.title }}</th>
+        {% endfor %}
+        <th class="g-actions sticky-actions" rowspan="2">פעולות</th>
+      </tr>
+      <tr class="field-row">
+        {% for group in groups %}
+          {% for field in group.fields %}
+            <th class="g-{{ group.id }} {% if field.key == 'id' %}sticky-id{% endif %} {% if field.key == 'name' %}sticky-name{% endif %}">{{ field.label }}</th>
+          {% endfor %}
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {{ service_row(new_row) }}
+      {% for row in rows %}
+        {{ service_row(row) }}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

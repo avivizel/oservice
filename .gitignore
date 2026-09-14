@@ -6,6 +6,7 @@ __pycache__/
 *.db-shm
 *.db.cos-snapshot
 data/
+backups/
 .idea/
 .vscode/
 *.log
