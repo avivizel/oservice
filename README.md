@@ -6,7 +6,7 @@
 
 Hebrew RTL portal for **addiction and mental-health services in Israel**, built for social workers. Search, filter, call, and keep a shared catalog of public services and supervised private / nonprofit frames.
 
-There is **no login**. Anyone with the URL can use it. Treat it as an internal professional tool: the data is a working catalog, not a clinical diagnosis, and a social worker should still confirm a phone number, license, and eligibility before referring someone.
+The **public catalog has no login**. Anyone with the URL can use it. Treat it as an internal professional tool: the data is a working catalog, not a clinical diagnosis, and a social worker should still confirm a phone number, license, and eligibility before referring someone.
 
 - **Source code:** [github.com/avivizel/oservice](https://github.com/avivizel/oservice)
 - **Host:** Render (Frankfurt), service `maaneim` — free instance, one replica
@@ -32,6 +32,8 @@ A social worker can:
 
 The UI is Hebrew, right-to-left, and styled after Tel Aviv–Yafo municipal pages. Layout adapts for phone vs desktop.
 
+A **locked maintainer area** (not linked from the public header or footer) lets the operator edit every provider in one spreadsheet-style table, export the full catalog to Excel, and see how many **people** used the site (not page hits). See [Maintainer tools](#maintainer-tools).
+
 ---
 
 ## Product rules (important)
@@ -43,9 +45,10 @@ These are not optional implementation details. They are how the catalog is suppo
 | **Do not invent phone numbers** | A number appears only if it came from a source page, an official dataset, or a person typing it in. |
 | **Official sources win** | Ministry of Health, Ministry of Welfare, government, municipality, and Bituach Leumi beat NGO / HTML scrapes when the same service conflicts. |
 | **HTML and NGO need a human** | Scraped municipal pages and nonprofit sites land in **תור סוכן** until someone approves or rejects them. |
-| **Open catalog** | No user accounts. Ratings and edits are shared with everyone who uses the site. |
+| **Open catalog** | No user accounts on the public site. Ratings and edits are shared with everyone who uses it. |
 | **The bucket is the database** | The live host must read and write **only** the SQLite file in COS. A new image push must not ship or overwrite that file. |
 | **One running replica** | SQLite + a single COS object cannot be safely written by two instances at once. Render is pinned to **one instance**. Do not also run Code Engine (or a second Render service) against the same object. |
+| **Review bots do not write** | A monthly catalog review (Grok or similar) may **read** a snapshot and send the operator a list. It must never `UPDATE` SQLite or `upload` to COS. The operator applies accepted changes in the maintainer table. |
 
 Footer disclaimer (also on every page): this is a local tool; information needs a social worker’s confirmation; if sources disagree, the official state source wins; check that a license is still valid before referring.
 
@@ -60,6 +63,7 @@ Browser (Hebrew RTL, HTMX)
 FastAPI  (app/main.py)
   views.py     search, cards, edit, URL import, ratings
   agent.py     scan, approval queue, Excel export
+  admin.py     locked maintainer table, usage report (not in public nav)
         │
         ▼
 SQLAlchemy 2  →  SQLite  (WAL)
@@ -72,12 +76,14 @@ SQLAlchemy 2  →  SQLite  (WAL)
 Startup sequence (`app/main.py`):
 
 1. If `COS_API_KEY` and `COS_BUCKET` are set, **download** `maaneim.db` from the bucket **before** SQLite is used. An empty download is refused.
-2. Create missing tables, run light migrations, seed the official localities list.
+2. Create missing tables, run light migrations, seed the official localities list, seed a maintainer login only if `admin_users` is empty.
 3. If nothing was restored from COS (first run only), seed a small built-in emergency/hotline set.
 4. Upload a consistent SQLite snapshot back to COS.
-5. Serve the site with Uvicorn.
+5. Serve the site with Uvicorn (**one worker**).
 
 If COS is not configured (typical laptop without secrets), the app uses `data/maaneim.db` on disk and never talks to the bucket.
+
+Non-static requests from real public IPs are buffered in memory and flushed about once a minute into `access_events` (for the usage report). Render health checks, private IPs, `/static`, and the maintainer area are not counted as people.
 
 ---
 
@@ -98,6 +104,34 @@ City dropdowns are **not** a hard-coded Tel Aviv list. They come from the `local
 
 ---
 
+## Maintainer tools
+
+Not linked from the public header or footer. Login required. Same FastAPI process and the same COS database.
+
+- **מענים** — every provider in one table, with the same fields as the public card (contact, eligibility/cost/audience, service types, source/confidence, social-worker rating). Edit any cell and save that row; delete removes the whole record. First yellow row adds a provider. Search filters by name, city, or phone.
+- **ייצוא Excel** — full catalog, Hebrew column groups, all rows (not only the current public search).
+- **גישה לאתר** — how many **people** used the portal. Same IP is one visit until **30 minutes** without activity; a return after that is a new visit. This is not HTTP hits and not a per-page report. Server probes and the maintainer area are excluded. Excel export of the daily people/visit table is on that screen.
+
+Change the maintainer password on the account page after first use. Do not put that password, or COS keys, in this README or in Git.
+
+Before bulk edits, keep a dated copy of `maaneim.db` **outside** the live object (local `backups/` is gitignored). The live app only writes the object `maaneim.db`.
+
+---
+
+## Monthly catalog review (read only)
+
+Once a month, a review bot (Grok or a person) should:
+
+1. **Download** a COS snapshot of `maaneim.db` for reading (`mode=ro`). Never run the live app with those keys just to “look”, and never `upload_file` / `put_object`.
+2. Learn the current `services` + `service_sources` rows.
+3. Scan official sources (data.gov.il CKAN packages, welfare frames, selected ministry/NGO pages).
+4. Match with `external_id`, then name + phone + city. Do not invent phones.
+5. Send the operator **four lists only**: new institutions, proposed field updates (with existing `id`), “not found in official source this month” (do not auto-delete), and conflicts. Official sources win.
+
+The operator applies accepted rows in the maintainer table. Playbook with connection details lives in a **local** file (`GROK_BOT.md`) that is gitignored and must not be pushed to GitHub.
+
+---
+
 ## Data that feeds the catalog
 
 ### Official catalogs (auto-import)
@@ -115,7 +149,7 @@ The agent walks Israeli local-authority sites (social services / education), usi
 On **הוספה ידנית**, a worker pastes a concrete page (not a whole homepage if they can avoid it). The importer:
 
 1. Tries a normal HTTPS fetch with a browser-like client.
-2. If Cloudflare blocks the data-center IP (common on Code Engine), tries `curl_cffi` TLS impersonation.
+2. If Cloudflare blocks the data-center IP, tries `curl_cffi` TLS impersonation.
 3. If that still returns a challenge page, falls back to the **Wayback Machine**.
 4. Prefers `h1` / `og:title` over a breadcrumb that says “דף הבית”.
 5. Decodes Cloudflare obfuscated emails.
@@ -124,7 +158,7 @@ On **הוספה ידנית**, a worker pastes a concrete page (not a whole homep
 
 ### What stays out of Git
 
-`.env`, `data/`, and `*.db` are gitignored and Docker-ignored. A Code Engine rebuild copies application code only. It must not contain a SQLite file that could be mistaken for production data.
+`.env`, `data/`, `backups/`, `*.db`, and `GROK_BOT.md` are gitignored (and Docker-ignored where relevant). A rebuild copies application code only. It must not contain a SQLite file that could be mistaken for production data.
 
 ---
 
@@ -159,6 +193,9 @@ Main tables:
 | `scan_runs` | Scan logs |
 | `municipality_sites` | Per-authority crawl progress |
 | `field_conflicts` | Official vs other-source disagreements |
+| `admin_users` | Maintainer login (password hashed) |
+| `admin_settings` | Including the session secret |
+| `access_events` | Public-site activity used to count people / visits |
 
 ---
 
@@ -225,7 +262,7 @@ On Render these are service environment variables (not committed to Git).
 | Git source | https://github.com/avivizel/oservice (`main`) |
 | Database | Same IBM COS object `maaneim.db` |
 
-A push to `main` on GitHub auto-deploys on Render. The new container downloads `maaneim.db` from the bucket on boot. The Docker image does not contain `data/` or `*.db`.
+A push to `main` on GitHub auto-deploys on Render. If the GitHub auto-clone is stale, a manual `render deploys create --clear-cache --wait` is the reliable path. The new container downloads `maaneim.db` from the bucket on boot. The Docker image does not contain `data/` or `*.db`.
 
 The free instance **sleeps after about 15 minutes** idle. The first visit after that is slower while the process starts and restores the database from COS.
 
@@ -246,13 +283,17 @@ app/
   models.py            SQLAlchemy tables
   query.py             Search and filters
   catalogs.py          Hebrew labels for types, districts, ratings
-  localities.py       Official locality list → localities table
+  localities.py        Official locality list → localities table
   seed.py              Small built-in seed (used only if COS is empty)
   client.py            Mobile vs desktop detection
+  admin_auth.py        Maintainer login (PBKDF2), lockout, session secret
+  access_log.py        Buffer public visits; 30-minute IP sessions
   routers/views.py     Search, cards, edit, URL import, ratings
-  routers/agent.py     Scan, queue, Excel
+  routers/agent.py     Scan, queue, Excel of the current search
+  routers/admin.py     Maintainer table, catalog Excel, usage report
   agent/               Harvest, match, municipal crawl, URL import
-  templates/           Jinja2, RTL
+  templates/           Public Jinja2, RTL
+  templates/admin/     Maintainer UI (not linked from public nav)
   static/              CSS / JS
 israel_cities_localities_local_councils_2026-08-28.md
 Dockerfile             Production image (no database inside)
@@ -267,6 +308,7 @@ run.py                 Local: http://127.0.0.1:8080 with reload
 
 - **Python 3.12**, **FastAPI**, **Uvicorn**, **Jinja2**, **HTMX**
 - **SQLAlchemy 2** + **SQLite** (WAL)
+- **Starlette sessions** (`itsdangerous`) for the maintainer login
 - **httpx**, **BeautifulSoup**, **lxml**, **rapidfuzz**, **openpyxl**
 - **ibm-cos-sdk** for the bucket
 - **curl_cffi** to impersonate Chrome when Cloudflare blocks the data-center IP
@@ -279,8 +321,9 @@ This is a server-rendered site, not a static GitHub Pages site. It needs a long-
 
 - **Do not scale above one replica.** Two writers will corrupt or clobber `maaneim.db` in the bucket.
 - **Do not bake the database into the image.** A push that includes `data/maaneim.db` is how catalogs get overwritten. The code already refuses to upload a tiny file over a large one, but the bucket should still be treated as irreplaceable.
-- **Do not commit `.env` or API keys.** Rotate any key that appeared in chat.
+- **Do not commit `.env`, API keys, or `GROK_BOT.md`.** Rotate any key that appeared in chat.
 - Scan quality is uneven: some municipal sites are JavaScript-only, some concatenate phone numbers, some pages are news rather than services. The queue exists so a person can throw those out.
+- A monthly review bot that writes to COS will damage the catalog. Snapshot download only; the operator edits.
 - The app is **not** a diagnostic tool and must not be presented as medical advice.
 
 ---
